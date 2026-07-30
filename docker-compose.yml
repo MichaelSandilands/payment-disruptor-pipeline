@@ -1,14 +1,35 @@
 volumes:
-  postgres-data:
+  cbi-payments-postgres-data:
+    driver: local
+  kestra-postgres-data:
     driver: local
   kestra-data:
     driver: local
 
 services:
-  postgres:
+  pgdatabase:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: cbi_payments
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+    volumes:
+      - cbi-payments-postgres-data:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=root
+    ports:
+      - "8085:80"
+  
+  kestra_postgres:
     image: postgres:18
     volumes:
-      - postgres-data:/var/lib/postgresql
+      - kestra-postgres-data:/var/lib/postgresql
     environment:
       POSTGRES_DB: kestra
       POSTGRES_USER: kestra
@@ -36,15 +57,15 @@ services:
       KESTRA_CONFIGURATION: |
         datasources:
           postgres:
-            url: jdbc:postgresql://postgres:5432/kestra
+            url: jdbc:postgresql://kestra_postgres:5432/kestra
             driverClassName: org.postgresql.Driver
             username: kestra
             password: k3str4
         kestra:
-          # server:
-          #   basic-auth:
-          #     username: admin@kestra.io # it must be a valid email address
-          #     password: Admin1234! # it must be at least 8 characters long with uppercase letter and a number
+          server:
+            basic-auth:
+              username: admin@kestra.io # it must be a valid email address
+              password: Admin1234! # it must be at least 8 characters long with uppercase letter and a number
           repository:
             type: postgres
           storage:
@@ -61,5 +82,5 @@ services:
       - "8080:8080"
       - "8081:8081"
     depends_on:
-      postgres:
+      kestra_postgres:
         condition: service_started
